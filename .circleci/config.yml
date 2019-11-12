@@ -1,0 +1,33 @@
+version: 2.1
+jobs:
+  test:
+    docker:
+      - image: circleci/python:3.6.8
+    working_directory: ~/cimr
+    resource_class: xlarge
+    steps:
+      - checkout
+      - run:
+          name: Install cimr
+          command: |
+            bash .circleci/install_cimr.sh
+      - run:
+          name: Test different data_type files and resulting catalog.txt
+          command: |
+            bash .circleci/test_data_type.sh
+      - run:
+          name: Test gwas tarball file
+          no_output_timeout: 30m
+          command: |
+            bash .circleci/test_tgz.sh
+      - run:
+          name: Test dropbox link file
+          no_output_timeout: 30m
+          command: |
+            bash .circleci/test_dbox.sh
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test

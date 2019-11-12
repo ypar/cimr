@@ -7,6 +7,7 @@ Options and parameters are listed for cimr subprocesses.
 (c) YoSon Park
 """
 
+
 __author__ = "YoSon Park"
 __copyright__ = "Copyright 2018-2019, YoSon Park"
 __credits__ = ["YoSon Park"]
@@ -14,8 +15,10 @@ __license__ = "BSD"
 __maintainer__ = "YoSon Park"
 __status__ = "production"
 
+
 import os
 import sys
+import json
 import argparse
 import pathlib
 import logging
@@ -24,15 +27,19 @@ import importlib
 
 import cimr
 
+from .defaults import CHUNKSIZE
+from .defaults import DATA_TYPES
+
+
 
 def parse_arguments():
     """Parse command line arguments for subprocesses of cimr."""
     parser = argparse.ArgumentParser(
-        description='cimr: continuous integration + analyses of summary statistics.'
+        description='cimr: continuously integrated meta-resource'
     )
     parser.add_argument(
-        '-version', 
-        action='version', 
+        '-version',
+        action='version',
         version=f'v{cimr.__version__}'
     )
     subparsers = parser.add_subparsers(
@@ -70,7 +77,7 @@ def parse_arguments():
             nargs='?',
             choices=['debug', 'info', 'warning', 'error', 'critical'],
             help='logger arguement for stderr logging level.',
-        )      
+        )
     args = parser.parse_args()
 
     return args
@@ -114,10 +121,18 @@ def add_subparser_processor(subparsers):
         help='file containing summary statistics or annotation data',
     )
     parser.add_argument(
+        '-catalog-name',
+        default='catalog.txt',
+        type=pathlib.Path,
+        dest='catalog_name',
+        nargs='?',
+        help='catalog file name to store metadata',
+    )
+    parser.add_argument(
         '-data-type',
         dest='data_type',
         help='input file data type',
-        choices=['gwas', 'eqtl', 'snp', 'gene', 'tad'],
+        choices=DATA_TYPES,
     )
     parser.add_argument(
         '-genome-build',
@@ -137,13 +152,28 @@ def add_subparser_processor(subparsers):
         default=False,
         dest='update_rsid',
         action='store_true',
-        help='whether to update snp rs IDs based on newest refsnp variation database',
+        help='whether to update snp rs IDs based on refseq',
     )
     parser.add_argument(
-        '-chunk-size',
-        default=10000,
-        dest='chunk_size',
+        '-chunksize',
+        default=CHUNKSIZE,
+        dest='chunksize',
+        type=int,
         help='number of rows in the input file to process at a time',
+    )
+    parser.add_argument(
+        '-yaml-file',
+        dest='yaml_file',
+        help='yaml file containing information about data',
+    )
+    parser.add_argument(
+        '-column-set',
+        default='{"key":"value"}',
+        dest='columnset',
+        type=json.loads,
+        nargs='?',
+        help='dictionary containing corresponding header names, '
+             'if different from the cimr default',
     )
 
     # not required for data-type gwas
@@ -172,7 +202,7 @@ def add_subparser_processor(subparsers):
              'the output will include the following columns: '
              'official gene symbol, entrez gene id, and ensembl gene id.',
     )
-    
+
     # integrate-specific arguments
     parser.add_argument(
         '-can-be-public',
@@ -210,7 +240,7 @@ def add_subparser_processor(subparsers):
         dest='protocol',
         help='name of the protocol used. For example, Hi-C for tad coordinates.'
     )
-    
+
     parser.set_defaults(function='cimr.processor.processor_prompt.processor_cli')
 
 
@@ -272,11 +302,11 @@ def add_subparser_gene(subparsers):
 def add_subparser_network(subparsers):
     parser = subparsers.add_parser(
         name='network', help='network analysis using cimr data',
-        description='run network analysis tools ',        
+        description='run network analysis tools ',
     )
 
     parser.add_argument(
-        '-random-count', 
+        '-random-count',
         default=100000,
         dest='random_count',
         nargs='?',
@@ -306,35 +336,48 @@ def add_subparser_network(subparsers):
 
     nargs = parser.add_mutually_exclusive_group()
     nargs.add_argument(
-        '-random', 
+        '-random',
         default=False,
         action='store_true',
         help='select random edges from a network. '
              'use -randomcount to indicate number of edges to select',
     )
     nargs.add_argument(
-        '-svm', 
+        '-svm',
         default=False,
         action='store_true',
         help='network analysis using support vector machines',
     )
-    
+
     parser.set_defaults(function='cimr.network.network_prompt.network_cli')
+
+
+def set_log(args):
+    """Set loglevel and format"""
+    loglevel = args.loglevel
+    numeric_level = getattr(logging, loglevel.upper(), None)
+
+    FORMAT = '[%(asctime)-15s %(name)s:%(levelname)-8s] %(message)s'
+    DATEFMT = '%Y-%m-%d %H:%M:%S'
+
+    if loglevel in ['debug', 'info', 'warning', 'error', 'critical']:
+
+        if not isinstance(numeric_level, int):
+            raise ValueError(' invalid log level: %s' % loglevel)
+
+        logging.basicConfig(
+            level=numeric_level,
+            format=FORMAT,
+            datefmt=DATEFMT
+        )
+    else:
+        raise ValueError(' -log argument must be debug, info, warning, error, or critical.')
 
 
 def main():
     """The main CLI prompt of cimr"""
     args = parse_arguments()
-    loglevel = args.loglevel
-    numeric_level = getattr(logging, loglevel.upper(), None)
-    if loglevel in ['debug', 'info', 'warning', 'error', 'critical']:
-        logging.basicConfig(level=numeric_level)
-        if not isinstance(numeric_level, int):
-            raise ValueError(' invalid log level: %s' % loglevel)
-        logging.basicConfig(level=numeric_level)
-    else:
-        logging.error(f' -log argument must be debug, info, warning, error, or critical.')
-        logging.error(f' -log argument is set to \'info\' by default.')
+    set_log(args)
     module_name, function_name = args.function.rsplit('.', 1)
     module = importlib.import_module(module_name)
     function = getattr(module, function_name)

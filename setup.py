@@ -69,6 +69,8 @@ setuptools.setup(
         'pathlib',
         'setuptools',
         'requests',
+        'pyyaml',
+        'tqdm',
     ],
 
     # Additional groups of dependencies

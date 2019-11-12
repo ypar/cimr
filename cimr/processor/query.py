@@ -1,6 +1,6 @@
 
 
-"""Utility functions related to annotating the input files or checking 
+"""Utility functions related to annotating the input files or checking
 user-provided annotations such as gene IDs, gene names, etc.
 
 (c) YoSon Park
@@ -15,7 +15,9 @@ import requests
 
 
 def subtract_plus(joined_fields):
-    """Split the feature list by the delimiter to run per-element checks"""
+    """Split the feature list by the delimiter to run per-element
+    checks
+    """
     return joined_fields.split('+')
 
 
@@ -34,31 +36,40 @@ class Querier:
     Parameter
     ---------
 
-    headers : headers used for the requests. default provided by mygene is
+    headers : headers used for the requests. default provided by
+              mygene is
               {'content-type':'application/x-www-form-urlencoded'}
 
     url : the current default is v3 and url is set as below
           'https://mygene.info/v3/query'
-          v2 is provided below (outdated, but not deprecated as of Jan 2019)
+          v2 is provided below (outdated, but not deprecated as of
+          Jan 2019)
           'https://mygene.info/v2/query'
 
     species : the default is 9606 or human for cimr analyses.
-              for general mygene usage, the doc is available in the below site
+              for general mygene usage, the doc is available in the
+              below site
               https://docs.mygene.info/en/latest/doc/data.html#species
 
     scopes : the search space of the queried terms can be listed here.
-             default setting includes that the query involves a gene with
-             identifiers in the below described scopes
+             default setting includes that the query involves a gene
+             with identifiers in the below described scopes
+
              symbol - official gene symbol (e.g. APOE)
              entrezgene - entrez gene ID
              ensembl.gene - Ensembl gene ID starting with ENSG
-             ensembl.transcript - Ensembl transcript ID starting with ENST
+             ensembl.transcript - Ensembl transcript ID starting with
+                ENST
 
-    fields : the below table is from the mygene documentation indicated below
-             https://docs.mygene.info/en/latest/doc/query_service.html#available-fields
-             I have reordered the table alphabetically and shortened some
-             descriptions.
-             The fields and scopes parameters share the same variable names.
+    fields : the below table is from the mygene documentation
+             indicated below
+             https://docs.mygene.info/en/latest/doc/query_service.ht
+             ml#available-fields
+
+             I have reordered the table alphabetically and shortened
+             some descriptions.
+             The fields and scopes parameters share the same variable
+             names.
 
     field             | description         | examples
     ------------------------------------------------------------------------------
@@ -67,7 +78,7 @@ class Querier:
     ensembl.gene      | Ensembl gene ID     | ensembl.gene:ENSG00000123374
     ensembl.protein   | Ensembl protein ID  | ensembl.protein:ENSP00000243067
     ensembl.transcript| Ensembl transcriptID| ensembl.transcript:ENST00000266970
-    entrezgene        | Entrez gene ID      | entrezgene:1017   
+    entrezgene        | Entrez gene ID      | entrezgene:1017
     flybase           | Drosophila gen(om)es| flybase:FBgn0004107&species=fruitfly
     go                | Gene Ontology ID    | go:0000307
     hgnc              | HUGO                | hgnc:1771
@@ -99,7 +110,7 @@ class Querier:
     Methods
     -------
 
-    
+
 
     Notes
     -----
@@ -107,29 +118,29 @@ class Querier:
     https://mygene.info website documentation can be found here:
     https://docs.mygene.info/en/latest/index.html
 
-    https://mygene.info is a website for gene annotation queries using the biothings
-    backend. biothings documentation is here
+    https://mygene.info is a website for gene annotation queries using
+    the biothings backend. biothings documentation is here
     https://biothingsapi.readthedocs.io/en/latest
 
-    cimr currently only utilizes the batch query function using direct queries
-    to the website api
+    cimr currently only utilizes the batch query function using direct
+    queries to the website api
 
     """
 
     FIELDS = {
-        'accession', 'alias', 'ensembl.gene', 'ensembl.protein', 
+        'accession', 'alias', 'ensembl.gene', 'ensembl.protein',
         'ensembl.transcript', 'entrezgene', 'flybase', 'go', 'hgnc',
-        'homologene', 'hprd', 'interpro', 'mgi', 'mim', 'mirbase', 
+        'homologene', 'hprd', 'interpro', 'mgi', 'mim', 'mirbase',
         'name', 'pdb', 'pfam', 'pharmgkb', 'prosite', 'reagent',
         'refseq', 'reporter', 'retired', 'rgd', 'summary', 'symbol',
         'tair', 'unigene', 'uniprot', 'wormbase', 'xenbase', 'zfin'
     }
 
 
-    def __init__(self, 
+    def __init__(self,
                  genes,
-                 headers={'content-type':'application/x-www-form-urlencoded'}, 
-                 url='https://mygene.info/v3/query', 
+                 headers={'content-type':'application/x-www-form-urlencoded'},
+                 url='https://mygene.info/v3/query',
                  species=9606,
                  scopes='alias+symbol+entrezgene+ensembl.gene+ensembl.transcript',
                  fields='name+symbol+taxid+entrezgene+ensembl+alias+refseq'
@@ -144,33 +155,34 @@ class Querier:
 
 
     def make_string(self):
-        """Take the gene_id column input from the data table and turn it
-        into a string to be used in form_query
+        """Take the input from the data table and turn it into a
+        string to be used in form_query
         """
         if type(self.genes) is list:
-            logging.info(f' converting a gene list into a queriable string.')
+            logging.info(f' converting the gene list for queries.')
             self.genestring = add_plus(self.genes)
         else:
-            logging.error(f' is the input a list with gene_id\'s?')
+            logging.error(f' is the input a list with gene\'s?')
 
-    
+
     def check_fields(self):
-        """Check if all items indicated in the fields parameter are legit.
-        The list has been updated based on mygene.info documentation on
-        January 2019.
+        """Check if all items indicated in the fields parameter are
+        legit. The list has been updated based on mygene.info
+        documentation on January 2019.
         """
         splitted = subtract_plus(self.fields)
         for field in splitted:
             if field not in self.FIELDS:
-                raise ValueError(' %s is not a valid field supported in cimr.' % field)
+                raise ValueError(' %s is not a valid field.' % field)
             else:
                 splitted.remove(field)
         self.fields = add_plus(splitted)
-    
+
 
     def check_ensembl(self):
-        """Commonly used Ensembl ID may include a version identifier. Check for any
-        Ensembl IDs in the feature list and remove the version identifier.
+        """Commonly used Ensembl ID may include a version identifier.
+        Check for any Ensembl IDs in the feature list and remove the
+        version identifier.
         """
         if any('ENSG' in g for g in self.genes):
             self.gene_db = 'ensembl.gene'
@@ -179,11 +191,11 @@ class Querier:
         elif any('ENSP' in g for g in self.genes):
             self.gene_db = 'ensembl.protein'
         else:
-            logging.info(f' no human ensembl ID found in the gene_id column.')
+            logging.info(f' no human ensembl ID found in the column.')
 
         if not self.gene_db in subtract_plus(self.scopes):
             self.scopes = str(self.scopes) + '+' + str(self.gene_db)
-        
+
 
     @classmethod
     def from_csv(cls, features):
@@ -192,29 +204,93 @@ class Querier:
             queried = cls(feature_list)
             return queried
         else:
-            raise ValueError(' features appear to be already split.')        
+            raise ValueError(' features appear to be already split.')
 
 
     def form_query(self):
-        """Form a query based on parameters. cimr uses the batch query of a gene
-        list to the website api of the database.
-        By default, only gene_ids in the format of symbol, entrez id, or
-        ensembl (gene/transcript) are accepted but other options may be indicated
-        by scopes option if cimr Querier is used without cimr-d integration.
+        """Form a query based on parameters. cimr uses the batch query
+        of a gene list to the website api of the database.
+        By default, only gene_ids in the format of symbol, entrez id,
+        or ensembl (gene/transcript) are accepted but other options
+        may be indicated by scopes option if cimr Querier is used
+        without cimr-d integration.
         """
         try:
             self.make_string()
         except:
-            raise ValueError(' An error occurred while converting the gene list.')
+            raise ValueError(' gene list could not be converted.')
 
         params = ('q=' + str(self.genestring) +
                  '&scopes=' + str(self.scopes) +
-                 '&fields=' + str(self.fields) + 
+                 '&fields=' + str(self.fields) +
                  '&species=' + str(self.species)
         )
 
-        self.queried = requests.post(self.url, headers=self.headers, data=params)
-        self.jsoned = json.loads(self.queried.text)
+        self.queried = requests.post(
+            self.url,
+            headers=self.headers,
+            data=params
+        )
+        try:
+            self.jsoned = json.loads(self.queried.text)
+        except:
+            logging.info(f' {params}')
+            logging.info(f' {self.queried}')
+
+
+    def list_queried(self):
+        """"""
+        _columns = ['feature_name', 'entrezgene', 'ensemblgene', 'feature_alias']
+        queried_genes = pandas.DataFrame(columns=_columns)
+        try:
+            for gene in range(0, len(self.jsoned)):
+                row = {}
+
+                try:
+                    row['feature_name'] = self.jsoned[gene]['symbol']
+                except KeyError:
+                    logging.debug(f' %s does not have an official gene symbol' % self.jsoned[gene]['query'])
+                    row['feature_name'] = 'NA'
+
+                try:
+                    row['entrezgene'] = self.jsoned[gene]['entrezgene']
+                except KeyError:
+                    logging.debug(f' %s does not have an entrez ID.' % self.jsoned[gene]['query'])
+                    row['entrezgene'] = 'NA'
+
+                try:
+                    row['ensemblgene'] = self.jsoned[gene]['ensembl']['gene']
+                except KeyError:
+                    logging.debug(f' %s does not have an ensembl ID.' % self.jsoned[gene]['query'])
+                    row['ensemblgene'] = 'NA'
+                except TypeError:
+                    row['ensemblgene'] = self.jsoned[gene]['ensembl'][0]['gene']
+                except:
+                    logging.debug(f' %s has a type error' % self.jsoned[gene]['query'])
+                    row['ensemblgene'] = 'NA'
+
+                try:
+                    row['feature_alias'] = self.jsoned[gene]['alias']
+                except KeyError:
+                    row['feature_alias'] = 'NA'
+
+                queried_genes = queried_genes.append(
+                    row,
+                    ignore_index=True
+                )
+            return queried_genes
+
+        except:
+            print(self.jsoned[gene]["query"])
+            raise ValueError(' the parsed list could not be written.')
+
+
+    def return_to_cimr(self):
+        """If Querier is called within cimr(-d) rather than as an
+        independent annotation call, return queried object to cimr
+        to be integrated back to the dataframe
+        """
+        return self.list_queried()
 
 
     def write_json(self, annot_file_out):
@@ -225,67 +301,36 @@ class Querier:
             with open(annot_file_out, 'w') as outfile:
                 json.dump(self.jsoned, outfile, indent=4)
         except:
-            raise ValueError(' an error occurred while writing the queried gene list.')
+            raise ValueError(' queried list could not be written')
 
 
     def write_gene(self, annot_file_out):
-        """Write official gene symbol, entrez IDs and ensembl gene IDs 
+        """Write official gene symbol, entrez IDs and ensembl gene IDs
         for each gene_id.
         """
-        with open(annot_file_out, 'w') as outfile:
-
-            try:    
-                for gene in range(0, len(self.jsoned)):
-
-                    try:
-                        symbol = self.jsoned[gene]['symbol']
-                    except KeyError:
-                        logging.info(f' %s does not have an official gene symbol' % self.jsoned[gene]['query'])
-                        symbol = 'NA'
-
-                    try:
-                        entrez = self.jsoned[gene]['entrezgene']
-                    except KeyError:
-                        logging.info(f' %s does not have an entrez ID.' % self.jsoned[gene]['query'])
-                        entrez = 'NA'
-
-                    try:
-                        ensembl = self.jsoned[gene]['ensembl']['gene']
-                    except KeyError:
-                        logging.info(f' %s does not have an ensembl ID.' % self.jsoned[gene]['query'])
-                        ensembl = 'NA'
-
-                    except TypeError:
-                        ensembl = self.jsoned[gene]['ensembl'][0]['gene']
-                    except:
-                        logging.info(f' %s has a type error' % self.jsoned[gene]['query'])
-                        ensembl = 'NA'
-                    
-                    try: 
-                        alias = self.jsoned[gene]['alias']
-                    except KeyError:
-                        logging.info(f' %s does not have an alias.' % self.jsoned[gene]['query'])
-                        alias = 'NA'
-
-                    print(symbol, entrez, ensembl, alias, file=outfile)
-
-            except:
-                print(self.jsoned[gene]["query"])
-                raise ValueError(' an error occurred while writing the parsed gene list')
+        queried_genes = self.list_queried()
+        queried_genes.to_csv(
+            annot_file_out,
+            sep='\t',
+            header=True,
+            index=False,
+            na_rep='NA'
+        )
 
 
 class Snpper:
-    """Query refsnp variation database directly to update RS IDs of SNPs.
-    
+    """Query refsnp variation database directly to update RS IDs of
+    SNPs.
+
     Returns
     -------
-    Either the original (if newest) or updated RS ID of the SNP along with
-    its position in the GRCh38.p12 reference genome.
+    Either the original (if newest) or updated RS ID of the SNP along
+    with its position in the GRCh38.p12 reference genome.
 
     Notes
     -----
-    Primarily queries the refsnp variation database for the latest RS IDs of
-    GRCh38 reference genome.
+    Primarily queries the refsnp variation database for the latest
+    RS IDs of GRCh38 reference genome.
 
     """
 
@@ -309,11 +354,16 @@ class Snpper:
 
         genome_build = json_data['primary_snapshot_data']['placements_with_allele'][0]['placement_annot']['seq_id_traits_by_assembly'][0]['assembly_name']
 
-        if genome_build == 'GRCh38.p12':            
+        if genome_build == 'GRCh38.p12':
             refseq_chrom = json_data['primary_snapshot_data']['placements_with_allele'][0]['alleles'][0]['allele']['spdi']['seq_id']
             pos = json_data['primary_snapshot_data']['placements_with_allele'][0]['alleles'][0]['allele']['spdi']['position']
             refseq_mapping_file = '/work/drug/gwas/gwas_catalog/chromosome_to_refseq_mapping.txt'
-            refseq_mapping = pandas.read_csv(refseq_mapping_file, sep='\t', header=0, na_values=['NA'])
+            refseq_mapping = pandas.read_csv(
+                refseq_mapping_file,
+                sep='\t',
+                header=0,
+                na_values=['NA']
+            )
             chrom = refseq_mapping[refseq_mapping['RefSeq_sequence'] == refseq_chrom]['Molecule_name'].values[0]
         else:
             logging.error('')
